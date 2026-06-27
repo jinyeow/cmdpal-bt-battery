@@ -4,6 +4,7 @@ using BtBattery.Windows;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using System;
+using System.Diagnostics;
 
 namespace BtBattery.Extension;
 
@@ -19,12 +20,12 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     {
         Id = "BtBattery";
         DisplayName = "Bluetooth Battery";
-        Icon = new IconInfo("");
+        Icon = new IconInfo("");
 
         _dockItem = new ListItem(_listPage)
         {
             Title = "Bluetooth Battery",
-            Icon = new IconInfo(""),
+            Icon = new IconInfo(""),
             Subtitle = "—",
         };
 
@@ -63,16 +64,20 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
         {
             _coordinator.Start();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // Watcher-start failure is non-fatal; on-open refresh via GetItems() still works.
+            Debug.WriteLine(ex.ToString());
         }
     }
 
     private void OnSummaryPublished(BatterySummary summary)
     {
-        try { _dockItem.Subtitle = summary.DockTitle; } catch { }
-        try { _listPage.NotifySummaryChanged(summary); } catch { }
+        try { _dockItem.Subtitle = summary.DockTitle; }
+        catch (Exception ex) { Debug.WriteLine(ex.ToString()); }
+
+        try { _listPage.NotifySummaryChanged(); }
+        catch (Exception ex) { Debug.WriteLine(ex.ToString()); }
     }
 
     public override void Dispose()

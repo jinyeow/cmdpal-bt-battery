@@ -3,6 +3,7 @@ using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace BtBattery.Extension.Pages;
 
@@ -30,9 +31,10 @@ public sealed partial class BtBatteryListPage : ListPage
             {
                 Coordinator.RefreshNowAsync().GetAwaiter().GetResult();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // Enumeration fault — show stale/empty data rather than crash.
+                Debug.WriteLine(ex.ToString());
             }
         }
 
@@ -40,7 +42,7 @@ public sealed partial class BtBatteryListPage : ListPage
         return BuildItems(summary);
     }
 
-    internal void NotifySummaryChanged(BatterySummary summary) => RaiseItemsChanged(0);
+    internal void NotifySummaryChanged() => RaiseItemsChanged(0);
 
     private static IListItem[] BuildItems(BatterySummary summary)
     {
