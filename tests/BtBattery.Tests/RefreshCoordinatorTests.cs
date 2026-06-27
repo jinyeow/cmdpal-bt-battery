@@ -242,6 +242,33 @@ public sealed class RefreshCoordinatorTests
     }
 
     [Fact]
+    public async Task Start_WatcherFails_UnsubscribesAndAllowsRetry()
+    {
+        var provider = new FakeProvider { Devices = [Device("Mouse", BatteryLevel.Known(50))] };
+        provider.FailNextStartWatching();
+        var published = new List<BatterySummary>();
+        var time = new FakeTimeProvider();
+        using var coordinator = new RefreshCoordinator(
+            provider, LowThreshold, time, published.Add, Debounce, Fallback);
+
+        Assert.Throws<InvalidOperationException>(() => coordinator.Start());
+
+        // After a failed Start, invalidations must not trigger refreshes (handler should be unsubscribed)
+        provider.RaiseInvalidated();
+        time.Advance(Debounce);
+        await Task.Yield();
+        Assert.Equal(0, provider.QueryCount);
+
+        // Retry must succeed; fallback timer fires and watcher is started exactly once
+        coordinator.Start();
+        Assert.Equal(1, provider.WatchCount);
+        time.Advance(Fallback);
+        await Task.Yield();
+        Assert.Equal(1, provider.QueryCount);
+        Assert.Single(published);
+    }
+
+    [Fact]
     public async Task BackgroundRefresh_ProviderFault_CoordinatorStillFunctional()
     {
         var provider = new FakeProvider { Devices = [Device("Mouse", BatteryLevel.Known(50))] };
@@ -288,7 +315,7 @@ public sealed class RefreshCoordinatorTests
     }
 
     [Fact]
-    public async Task RefreshNow_CancelledBeforeStart_ThrowsAndGateReleased()
+    public async Task RefreshNow_PreCancelledToken_ThrowsAndGateNeverAcquired()
     {
         var provider = new FakeProvider { Devices = [Device("Mouse", BatteryLevel.Known(50))] };
         var published = new List<BatterySummary>();
@@ -296,8 +323,8 @@ public sealed class RefreshCoordinatorTests
         using var coordinator = new RefreshCoordinator(
             provider, LowThreshold, time, published.Add, Debounce, Fallback);
 
-        // A pre-cancelled token causes WaitAsync to throw TaskCanceledException (: OperationCanceledException)
-        // without ever acquiring the semaphore, so the gate remains available.
+        // A pre-cancelled token causes WaitAsync to throw before acquiring the semaphore,
+        // so the gate remains available for the subsequent call.
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => coordinator.RefreshNowAsync(new CancellationToken(canceled: true)));
 
@@ -326,6 +353,7 @@ public sealed class RefreshCoordinatorTests
     {
         private TaskCompletionSource? _gate;
         private bool _faultNext;
+        private bool _failNextStartWatching;
 
         public IReadOnlyList<MonitoredDevice> Devices { get; set; } = [];
         public int QueryCount { get; private set; }
@@ -362,11 +390,23 @@ public sealed class RefreshCoordinatorTests
         /// <summary>Makes the next <see cref="GetConnectedDevicesAsync"/> call throw <see cref="InvalidOperationException"/>.</summary>
         public void FaultNext() => _faultNext = true;
 
+        /// <summary>Makes the next <see cref="StartWatching"/> call throw <see cref="InvalidOperationException"/>.</summary>
+        public void FailNextStartWatching() => _failNextStartWatching = true;
+
         public event EventHandler? DevicesInvalidated;
 
         public void RaiseInvalidated() => DevicesInvalidated?.Invoke(this, EventArgs.Empty);
 
-        public void StartWatching() => WatchCount++;
+        public void StartWatching()
+        {
+            if (_failNextStartWatching)
+            {
+                _failNextStartWatching = false;
+                throw new InvalidOperationException("Simulated StartWatching failure.");
+            }
+
+            WatchCount++;
+        }
 
         public void StopWatching() { }
 

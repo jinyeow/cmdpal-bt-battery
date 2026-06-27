@@ -61,9 +61,22 @@ public sealed class RefreshCoordinator : IDisposable
             _started = true;
         }
 
-        _provider.DevicesInvalidated += OnDevicesInvalidated;
-        _provider.StartWatching();
-        _fallbackTimer.Change(_fallbackInterval, _fallbackInterval);
+        try
+        {
+            // StartWatching first: if it throws we have nothing to roll back.
+            // Early watcher events that arrive before the subscription are tolerable —
+            // the fallback timer ensures the next refresh catches up.
+            _provider.StartWatching();
+            _provider.DevicesInvalidated += OnDevicesInvalidated;
+            _fallbackTimer.Change(_fallbackInterval, _fallbackInterval);
+        }
+        catch
+        {
+            // Roll back so a retry can succeed. -=  is a no-op if += was never reached.
+            _provider.DevicesInvalidated -= OnDevicesInvalidated;
+            lock (_lock) { _started = false; }
+            throw;
+        }
     }
 
     /// <summary>The on-open trigger: awaitable so a page can render against fresh data.</summary>
