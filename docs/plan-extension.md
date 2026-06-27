@@ -1,6 +1,6 @@
 # BtBattery.Extension — MVP Implementation Plan
 
-> Status: Phase 1–3 complete. Pending: Phase 4 (dock band), Phase 5 (dock wiring), Phase 6 (ADRs).
+> Status: Phases 1–5 complete (build/register/list/dock/wiring). Phase 6 (ADRs) pending.
 > CLSID: `ae2698e1-5166-4448-9582-bdfdf457d95f`
 
 ## Acceptance bar
@@ -23,7 +23,7 @@
 | COM server library | `Shmuelie.WinRTServer` | Matches EverythingCommandPalette (known-working open-source reference) |
 | Extension TFM | `net9.0-windows10.0.22621.0` | CmdPal SDK compiled against SDK.NET 10.0.26100.38; net9.0 + `WindowsSdkPackageVersion=10.0.26100.38` avoids NETSDK1148 |
 | RaiseItemsChanged thread | Direct call, no DispatcherQueue | Extension COM server has no WinUI UI thread; COM proxy marshals the WinRT event. Verify at runtime. |
-| Dock band surface | `IContentPage` (expandable flyout) | PRD §149 / CmdPal dock band model |
+| Dock band surface | `WrappedDockItem([ListItem], id, title)` | Actual API: `GetDockBands()` returns `ICommandItem[]` not `IContentPage[]`; `WrappedDockItem` wraps a `ListItem` that has `BtBatteryListPage` as its `Command` |
 | IDockBandFactory | Skipped (YAGNI) | PRD §159 describes it as "additive change later" — not in v1 |
 | coordinator.Start() timing | Lazy (first TopLevelCommands() call) | Watcher-start failure in ctor blocks extension activation (Codex HIGH); lazy + catch makes it non-fatal |
 | Watcher-start failure | Catch + log, continue without live updates | Device enumeration on-open still works; live watcher is a "nice-to-have" that degrades gracefully |
@@ -94,19 +94,20 @@ File: `src/BtBattery.Extension/Pages/BtBatteryListPage.cs`
 
 **Verify**: deployment test — open CmdPal, navigate to "Bluetooth Battery", verify rows appear.
 
-## Phase 4 — Dock band (IContentPage)
+## Phase 4 — Dock band ✅
 
-**Goal**: dock flyout shows the summary.
+**Goal**: dock band shows battery summary; clicking opens device list flyout.
 
-File: `src/BtBattery.Extension/Pages/BtBatteryDockPage.cs`
-- Extends `ContentPage` 
-- `Title` = `_coordinator.Current.DockTitle` (updated on each publish)
-- Content: embedded `BtBatteryListPage` (the flyout body is the same list)
-- `BtBatteryCommandsProvider.GetDockBands()` override returns this page wrapped appropriately
+**Actual implementation** (deviates from original plan — no separate ContentPage needed):
+- No `BtBatteryDockPage.cs` — dock band is a `ListItem` wrapping the existing `BtBatteryListPage`
+- `_dockItem = new ListItem(_listPage) { Title = "Bluetooth Battery", Subtitle = "—" }`
+- `GetDockBands()` returns `[new WrappedDockItem([_dockItem], "BtBattery.dock", "Bluetooth Battery")]`
+- `OnSummaryPublished` updates `_dockItem.Subtitle = summary.DockTitle`
+- `IContentPage` was the wrong type; the dock band API is `ICommandItem[]` from `ICommandProvider3.GetDockBands()`
 
-**Verify**: dock band visible in CmdPal toolbar; click opens flyout with device list.
+**Verify**: dock band visible in CmdPal toolbar; click opens device list. (user verification needed)
 
-## Phase 5 — RefreshCoordinator wiring
+## Phase 5 — RefreshCoordinator wiring ✅
 
 **Goal**: live data flows through the extension.
 

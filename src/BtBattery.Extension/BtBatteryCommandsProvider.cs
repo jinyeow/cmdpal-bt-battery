@@ -7,9 +7,10 @@ using System;
 
 namespace BtBattery.Extension;
 
-public sealed class BtBatteryCommandsProvider : CommandProvider, IDisposable
+public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDisposable
 {
     private readonly BtBatteryListPage _listPage = new();
+    private readonly ListItem _dockItem;
     private readonly DeviceInformationBatteryProvider _btProvider = new();
     private readonly RefreshCoordinator _coordinator;
     private bool _started;
@@ -18,7 +19,14 @@ public sealed class BtBatteryCommandsProvider : CommandProvider, IDisposable
     {
         Id = "BtBattery";
         DisplayName = "Bluetooth Battery";
-        Icon = new IconInfo(""); // Bluetooth glyph
+        Icon = new IconInfo("");
+
+        _dockItem = new ListItem(_listPage)
+        {
+            Title = "Bluetooth Battery",
+            Icon = new IconInfo(""),
+            Subtitle = "—",
+        };
 
         _coordinator = new RefreshCoordinator(
             _btProvider,
@@ -37,6 +45,12 @@ public sealed class BtBatteryCommandsProvider : CommandProvider, IDisposable
         return [new ListItem(_listPage) { Title = "Bluetooth Battery" }];
     }
 
+    public override ICommandItem[] GetDockBands()
+    {
+        EnsureStarted();
+        return [new WrappedDockItem([_dockItem], "BtBattery.dock", "Bluetooth Battery")];
+    }
+
     private void EnsureStarted()
     {
         if (_started)
@@ -51,18 +65,17 @@ public sealed class BtBatteryCommandsProvider : CommandProvider, IDisposable
         }
         catch (Exception)
         {
-            // Watcher-start failure is non-fatal: on-open refresh via GetItems() still works.
+            // Watcher-start failure is non-fatal; on-open refresh via GetItems() still works.
         }
     }
 
     private void OnSummaryPublished(BatterySummary summary)
     {
-        // Exceptions from COM/WinRT events must not escape into RefreshCoordinator.
-        try { _listPage.NotifySummaryChanged(summary); }
-        catch { }
+        try { _dockItem.Subtitle = summary.DockTitle; } catch { }
+        try { _listPage.NotifySummaryChanged(summary); } catch { }
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
         _coordinator.Dispose();
         _btProvider.Dispose();

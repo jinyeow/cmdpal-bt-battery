@@ -10,7 +10,7 @@ namespace BtBattery.Extension.Pages;
 /// Top-level list page: searchable full device detail view.
 /// Items are populated from <see cref="RefreshCoordinator.Current"/> on each open.
 /// </summary>
-public sealed class BtBatteryListPage : ListPage
+public sealed partial class BtBatteryListPage : ListPage
 {
     // Set by BtBatteryCommandsProvider after construction.
     internal RefreshCoordinator? Coordinator { get; set; }
