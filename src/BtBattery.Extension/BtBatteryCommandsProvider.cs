@@ -1,9 +1,10 @@
-﻿using BtBattery.Abstractions;
+using BtBattery.Abstractions;
 using BtBattery.Extension.Pages;
 using BtBattery.Windows;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
@@ -12,7 +13,7 @@ namespace BtBattery.Extension;
 public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDisposable
 {
     private readonly BtBatteryListPage _listPage;
-    private readonly ListItem _dockItem;
+    private readonly WrappedDockItem _dockBand;
     private readonly DeviceInformationBatteryProvider _btProvider = new();
     private readonly RefreshCoordinator _coordinator;
     private bool _started;
@@ -36,11 +37,12 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
             getCurrent: () => _coordinator.Current,
             requestRefresh: () => _ = _coordinator.RefreshNowAsync());
 
-        _dockItem = new ListItem(new NoOpCommand() { Id = "BtBattery.listPage" })
+        _dockBand = new WrappedDockItem(
+            BuildDockItems(BatterySummary.Empty.Rows),
+            "BtBattery.listPage",
+            "Bluetooth Battery")
         {
-            Title = "Bluetooth Battery",
             Icon = new IconInfo(""),
-            Subtitle = "—",
         };
     }
 
@@ -53,7 +55,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     public override ICommandItem[] GetDockBands()
     {
         EnsureStarted();
-        return [new WrappedDockItem([_dockItem], "BtBattery.listPage", "Bluetooth Battery") { Icon = new IconInfo("") }];
+        return [_dockBand];
     }
 
     private void EnsureStarted()
@@ -77,30 +79,35 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
 
     private void OnSummaryPublished(BatterySummary summary)
     {
-        try
-        {
-            if (summary.Headline is MonitoredDevice hd)
-            {
-                _dockItem.Title = $"{hd.Battery.Percent}%";
-                _dockItem.Subtitle = hd.DisplayName;
-            }
-            else
-            {
-                _dockItem.Title = "Bluetooth Battery";
-                _dockItem.Subtitle = "—";
-            }
-        }
-        catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
-
-        // Guard: only re-render the list if content actually changed.
-        // Without this, GetItems() → _requestRefresh() → OnSummaryPublished (unchanged) →
-        // NotifySummaryChanged() → GetItems() creates an infinite BT enumeration loop.
         bool changed = !SummaryContentEquals(summary, _lastPublished);
         _lastPublished = summary;
         if (!changed) return;
 
+        try { _dockBand.Items = BuildDockItems(summary.Rows); }
+        catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
+
         try { _listPage.NotifySummaryChanged(); }
         catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
+    }
+
+    private static IListItem[] BuildDockItems(IReadOnlyList<MonitoredDevice> rows)
+    {
+        if (rows.Count == 0)
+        {
+            return [new ListItem(new NoOpCommand() { Id = "BtBattery.listPage" })
+            {
+                Title = "Bluetooth Battery",
+                Subtitle = "—",
+                Icon = new IconInfo(""),
+            }];
+        }
+
+        return [..rows.Select(d => (IListItem)new ListItem(new NoOpCommand() { Id = "BtBattery.listPage" })
+        {
+            Title = d.Battery.State == BatteryState.Known ? $"{d.Battery.Percent}%" : "—",
+            Subtitle = d.DisplayName,
+            Icon = new IconInfo(DeviceCategoryGlyph.For(d.Category)),
+        })];
     }
 
     private static bool SummaryContentEquals(BatterySummary a, BatterySummary b) =>
