@@ -16,7 +16,6 @@ public sealed class BatterySummaryComputeTests
             ContainerId: name,
             DisplayName: name,
             Category: category,
-            IsConnected: true,
             Battery: battery,
             HasMultipleBatteryValues: hasMultiple);
 

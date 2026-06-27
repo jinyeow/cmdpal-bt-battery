@@ -41,15 +41,9 @@ public sealed record BatterySummary(
             .Select(x => x.device)
             .ToArray();
 
-        MonitoredDevice[] known = devices
-            .Where(d => d.Battery.State == BatteryState.Known)
-            .ToArray();
+        MonitoredDevice? headline = rows.FirstOrDefault(d => d.Battery.State == BatteryState.Known);
 
-        MonitoredDevice? headline = known
-            .OrderBy(d => d.Battery.Percent)
-            .FirstOrDefault();
-
-        int lowCount = known.Count(d => d.Battery.Percent <= lowThreshold);
+        int lowCount = rows.Count(d => d.Battery.State == BatteryState.Known && d.Battery.Percent <= lowThreshold);
 
         string dockTitle;
         if (headline is null)
