@@ -1,6 +1,6 @@
 using Microsoft.CommandPalette.Extensions;
 using Shmuelie.WinRTServer;
-using System;
+using Shmuelie.WinRTServer.CsWinRT;
 
 namespace BtBattery.Extension;
 
@@ -11,7 +11,6 @@ public static class Program
     {
         if (args.Length == 0 || args[0] != "-RegisterProcessAsComServer")
         {
-            Console.WriteLine("Not launched as COM server — exiting.");
             return;
         }
 

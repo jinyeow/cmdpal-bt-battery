@@ -35,7 +35,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CommandPalette.Extensions" Version="0.9.260303001" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250228001" />
-    <PackageReference Include="Shmuelie.WinRTServer" Version="1.0.0" />
+    <PackageReference Include="Shmuelie.WinRTServer" Version="2.2.1" />
   </ItemGroup>
 
   <ItemGroup>
