@@ -36,7 +36,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
             getCurrent: () => _coordinator.Current,
             requestRefresh: () => _ = _coordinator.RefreshNowAsync());
 
-        _dockItem = new ListItem(_listPage)
+        _dockItem = new ListItem(new NoOpCommand() { Id = "BtBattery.listPage" })
         {
             Title = "Bluetooth Battery",
             Icon = new IconInfo(""),
@@ -53,7 +53,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     public override ICommandItem[] GetDockBands()
     {
         EnsureStarted();
-        return [new WrappedDockItem([_dockItem], "BtBattery.dock", "Bluetooth Battery") { Icon = new IconInfo("") }];
+        return [new WrappedDockItem([_dockItem], "BtBattery.listPage", "Bluetooth Battery") { Icon = new IconInfo("") }];
     }
 
     private void EnsureStarted()
@@ -77,7 +77,19 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
 
     private void OnSummaryPublished(BatterySummary summary)
     {
-        try { _dockItem.Subtitle = summary.DockTitle; }
+        try
+        {
+            if (summary.Headline is MonitoredDevice hd)
+            {
+                _dockItem.Title = $"{hd.Battery.Percent}%";
+                _dockItem.Subtitle = hd.DisplayName;
+            }
+            else
+            {
+                _dockItem.Title = "Bluetooth Battery";
+                _dockItem.Subtitle = "—";
+            }
+        }
         catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
 
         // Guard: only re-render the list if content actually changed.
