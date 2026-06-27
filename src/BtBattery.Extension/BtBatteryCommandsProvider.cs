@@ -79,6 +79,9 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
 
     private void OnSummaryPublished(BatterySummary summary)
     {
+        // Guard: only update the dock and re-render the list if content actually changed.
+        // Without this, GetItems() -> _requestRefresh() -> OnSummaryPublished (unchanged) ->
+        // NotifySummaryChanged() -> GetItems() creates an infinite BT enumeration loop.
         bool changed = !SummaryContentEquals(summary, _lastPublished);
         _lastPublished = summary;
         if (!changed) return;
@@ -90,11 +93,11 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
         catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
     }
 
-    private static IListItem[] BuildDockItems(IReadOnlyList<MonitoredDevice> rows)
+    private IListItem[] BuildDockItems(IReadOnlyList<MonitoredDevice> rows)
     {
         if (rows.Count == 0)
         {
-            return [new ListItem(new NoOpCommand() { Id = "BtBattery.listPage" })
+            return [new ListItem(_listPage)
             {
                 Title = "Bluetooth Battery",
                 Subtitle = "—",
@@ -102,7 +105,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
             }];
         }
 
-        return [..rows.Select(d => (IListItem)new ListItem(new NoOpCommand() { Id = "BtBattery.listPage" })
+        return [..rows.Select(d => (IListItem)new ListItem(_listPage)
         {
             Title = d.Battery.State == BatteryState.Known ? $"{d.Battery.Percent}%" : "—",
             Subtitle = d.DisplayName,
