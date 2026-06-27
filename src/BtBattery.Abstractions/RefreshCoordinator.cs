@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace BtBattery.Abstractions;
 
 /// <summary>
@@ -81,8 +83,9 @@ public sealed class RefreshCoordinator : IDisposable
                 }
 
                 Current = summary;
-                _publish(summary); // held under lock so Dispose() can't interleave between Current and publish
             }
+
+            _publish(summary);
         }
         finally
         {
@@ -133,10 +136,11 @@ public sealed class RefreshCoordinator : IDisposable
             {
                 // Expected: disposal cancelled the in-flight refresh.
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // Enumeration fault; retry on next trigger. Fire-and-forget must never throw into the host.
                 // TODO: structured logging when the Extension wires a logger.
+                Trace.TraceError(ex.ToString());
             }
 
             lock (_lock)
