@@ -46,7 +46,9 @@ public sealed class DeviceInformationBatteryProvider : IBatteryProvider
 
         if (deviceNodes is null && connectedContainers is null)
         {
-            return Array.Empty<MonitoredDevice>();
+            // Both queries failed — propagate so the coordinator preserves last-known-good Current
+            // rather than overwriting it with an empty summary that looks like "no devices".
+            throw new InvalidOperationException("Both Bluetooth enumeration queries failed.");
         }
 
         return Aggregate(
