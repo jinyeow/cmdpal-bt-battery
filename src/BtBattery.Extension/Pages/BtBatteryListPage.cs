@@ -1,44 +1,28 @@
 using BtBattery.Abstractions;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace BtBattery.Extension.Pages;
 
 /// <summary>
 /// Top-level list page: searchable full device detail view.
-/// Items are populated from <see cref="RefreshCoordinator.Current"/> on each open.
+/// Items are populated from the coordinator's current <see cref="BatterySummary"/> on each open.
 /// </summary>
 public sealed partial class BtBatteryListPage : ListPage
 {
-    // Set by BtBatteryCommandsProvider after construction.
-    internal RefreshCoordinator? Coordinator { get; set; }
+    private readonly Func<BatterySummary> _getCurrent;
 
-    public BtBatteryListPage()
+    public BtBatteryListPage(Func<BatterySummary> getCurrent)
     {
+        _getCurrent = getCurrent;
         Name = "Bluetooth Battery";
-        Icon = new IconInfo(""); // Bluetooth glyph
+        Icon = new IconInfo(""); // Bluetooth glyph
     }
 
     public override IListItem[] GetItems()
     {
-        // Refresh synchronously on open so the user sees fresh data immediately.
-        if (Coordinator is not null)
-        {
-            try
-            {
-                Coordinator.RefreshNowAsync().GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                // Enumeration fault — show stale/empty data rather than crash.
-                Debug.WriteLine(ex.ToString());
-            }
-        }
-
-        BatterySummary summary = Coordinator?.Current ?? BatterySummary.Empty;
+        BatterySummary summary = _getCurrent();
         return BuildItems(summary);
     }
 

@@ -10,7 +10,7 @@ namespace BtBattery.Extension;
 
 public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDisposable
 {
-    private readonly BtBatteryListPage _listPage = new();
+    private readonly BtBatteryListPage _listPage;
     private readonly ListItem _dockItem;
     private readonly DeviceInformationBatteryProvider _btProvider = new();
     private readonly RefreshCoordinator _coordinator;
@@ -22,13 +22,6 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
         DisplayName = "Bluetooth Battery";
         Icon = new IconInfo("");
 
-        _dockItem = new ListItem(_listPage)
-        {
-            Title = "Bluetooth Battery",
-            Icon = new IconInfo(""),
-            Subtitle = "—",
-        };
-
         _coordinator = new RefreshCoordinator(
             _btProvider,
             lowThreshold: 20,
@@ -37,7 +30,14 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
             debounceWindow: TimeSpan.FromMilliseconds(250),
             fallbackInterval: TimeSpan.FromMinutes(5));
 
-        _listPage.Coordinator = _coordinator;
+        _listPage = new BtBatteryListPage(() => _coordinator.Current);
+
+        _dockItem = new ListItem(_listPage)
+        {
+            Title = "Bluetooth Battery",
+            Icon = new IconInfo(""),
+            Subtitle = "—",
+        };
     }
 
     public override ICommandItem[] TopLevelCommands()
@@ -59,25 +59,25 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
             return;
         }
 
-        _started = true;
         try
         {
             _coordinator.Start();
+            _started = true;
         }
         catch (Exception ex)
         {
-            // Watcher-start failure is non-fatal; on-open refresh via GetItems() still works.
-            Debug.WriteLine(ex.ToString());
+            // Watcher-start failure is non-fatal; allow retry on next call.
+            Trace.TraceWarning(ex.ToString());
         }
     }
 
     private void OnSummaryPublished(BatterySummary summary)
     {
         try { _dockItem.Subtitle = summary.DockTitle; }
-        catch (Exception ex) { Debug.WriteLine(ex.ToString()); }
+        catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
 
         try { _listPage.NotifySummaryChanged(); }
-        catch (Exception ex) { Debug.WriteLine(ex.ToString()); }
+        catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
     }
 
     public override void Dispose()
