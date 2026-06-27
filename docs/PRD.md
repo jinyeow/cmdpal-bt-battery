@@ -1,6 +1,6 @@
 # PRD — BtBattery: Command Palette Bluetooth Battery Monitor (v1)
 
-> Status: ready-for-agent
+> Status: implemented — v1 MVP complete (Phases 1–5). See `docs/adr/` for implementation decisions.
 > Surface: PowerToys Command Palette (CmdPal) extension — Dock band + top-level list page
 > Platform: Windows 11, C# / .NET 8, WinUI + Windows App SDK, MSIX-packaged
 
@@ -140,13 +140,13 @@ when nothing is connected.
 ### Refresh model
 - **Hybrid**: fresh snapshot **on open** (flyout/list page) + a **lazy, disposable `DeviceWatcher`**
   that fires *invalidation* (drives the live dock-band headline) + a **5-minute fallback timer**.
-- A **`RefreshCoordinator`** (in the extension layer) owns all three triggers: it debounces watcher
-  bursts, serializes refreshes with a semaphore, runs exactly one more if a refresh is requested
-  mid-run, publishes only the latest completed result, and marshals to the WinUI thread at the
-  boundary.
+- A **`RefreshCoordinator`** (moved to `BtBattery.Abstractions` — ADR 001) owns all three triggers:
+  it debounces watcher bursts, serializes refreshes with a semaphore, runs exactly one more if a
+  refresh is requested mid-run, publishes only the latest completed result. No WinUI thread marshal
+  (see ADR 004 — the COM proxy handles cross-apartment marshaling).
 
 ### Surface & presentation
-- **Dock band = single expandable flyout band** (`IContentPage`). Headlines the **lowest *Known*
+- **Dock band = single WrappedDockItem** (ADR 003 — not `IContentPage`). Headlines the **lowest *Known*
   battery** (Unknown values excluded from the calc). Appends a **`+N` suffix** when 2+ devices are
   below the low threshold (N = additional low devices beyond the headlined one). Emphasis (icon/
   color where the dock surface supports it) when ≥1 device is low.
@@ -156,8 +156,7 @@ when nothing is connected.
 - **Empty/silent** when Bluetooth is off or there are no connected devices (no info rows). A
   user-pinned dock band likely cannot fully vanish; fallback is a **neutral idle glyph** — the
   spike confirms whether `GetDockBands()` can cleanly drop the band.
-- Presentation is built behind an **`IDockBandFactory`** seam so a second **per-device button-strip
-  layout** (and a layout-toggle setting) is a purely additive change later.
+- No `IDockBandFactory` seam in v1 (YAGNI — ADR 003). A second layout is a purely additive change.
 
 ### Settings
 - **No settings in v1.** Low threshold hardcoded at **20%**. Per-device customization, layout
@@ -171,8 +170,9 @@ Five projects:
   `Compute` function and `BatterySummary`.
 - **`BtBattery.Windows`** (`net8.0-windows10.0.19041`): `DeviceInformationBatteryProvider`
   (enumeration + watcher).
-- **`BtBattery.Extension`** (packaged WinUI): `CommandProvider`, pages, `IDockBandFactory` impl(s),
-  `RefreshCoordinator`.
+- **`BtBattery.Extension`** (packaged, net9.0): `CommandProvider`, pages. No WinUI dependency.
+  **Deviation from PRD**: `RefreshCoordinator` moved to `BtBattery.Abstractions` for testability
+  (see ADR 001). `IDockBandFactory` not implemented in v1 (YAGNI — see ADR 003).
 - **`BtBattery.Spike`** (console): references `BtBattery.Windows`; the proven enumeration code ships.
 - **`BtBattery.Tests`** (`net8.0`): xUnit over the pure logic.
 
