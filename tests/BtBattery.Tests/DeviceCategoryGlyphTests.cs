@@ -35,14 +35,24 @@ public sealed class DeviceCategoryGlyphTests
     [Fact]
     public void For_Headset_ReturnsSegoeAudioHeadphoneGlyph()
     {
-        // Segoe MDL2 Assets U+E7EF: AudioHeadphone
         Assert.Equal("", DeviceCategoryGlyph.For(DeviceCategory.Headset));
+    }
+
+    [Fact]
+    public void For_Mouse_ReturnsSegoeMouse2Glyph()
+    {
+        Assert.Equal("", DeviceCategoryGlyph.For(DeviceCategory.Mouse));
+    }
+
+    [Fact]
+    public void For_Keyboard_ReturnsSegoeKeyboardClassicGlyph()
+    {
+        Assert.Equal("", DeviceCategoryGlyph.For(DeviceCategory.Keyboard));
     }
 
     [Fact]
     public void For_Other_ReturnsSegoeBluetoothGlyph()
     {
-        // Segoe MDL2 Assets U+E702: Bluetooth
         Assert.Equal("", DeviceCategoryGlyph.For(DeviceCategory.Other));
     }
 }
