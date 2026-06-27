@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.22621.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.22621.0</SupportedOSPlatformVersion>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <!-- Microsoft.CommandPalette.Extensions was compiled against Microsoft.Windows.SDK.NET 10.0.26100.38.
+         Without this, the TFM's SDK.NET.Ref (10.0.22621.57) wins the conflict and triggers NETSDK1148.
+         See EverythingCommandPalette for the same pattern. -->
+    <WindowsSdkPackageVersion>10.0.26100.38</WindowsSdkPackageVersion>
+    <!-- CsWinRT falls back to the registry for WinMD lookup when WindowsSDKVersion is empty
+         (common in CLI builds where the VS environment is not loaded). Point it directly at the
+         NuGet-packaged WinMD files so the registry is never consulted. -->
+    <CsWinRTWindowsMetadata>$(NuGetPackageRoot)microsoft.windows.sdk.net.ref\$(WindowsSdkPackageVersion)\winmd</CsWinRTWindowsMetadata>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CommandPalette.Extensions" Version="0.9.260303001" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250228001" />
+    <PackageReference Include="Shmuelie.WinRTServer" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BtBattery.Windows\BtBattery.Windows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Assets\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- App extension PublicFolder — required by the schema; CmdPal uses COM activation, not file reads -->
+    <Content Include="Public\**" Exclude="$(DefaultItemExcludes)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

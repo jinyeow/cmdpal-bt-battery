@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 rescap">
+
+  <Identity
+    Name="JustinPuah.BtBattery"
+    Publisher="CN=BtBattery"
+    Version="0.1.0.0" />
+
+  <Properties>
+    <DisplayName>Bluetooth Battery</DisplayName>
+    <PublisherDisplayName>Justin Puah</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.22621.0" MaxVersionTested="10.0.22621.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22621.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate"/>
+  </Resources>
+
+  <Applications>
+    <Application Id="App"
+      Executable="$targetnametoken$.exe"
+      EntryPoint="$targetentrypoint$">
+      <uap:VisualElements
+        DisplayName="Bluetooth Battery"
+        Description="Monitor Bluetooth device battery levels"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+        <uap:SplashScreen Image="Assets\SplashScreen.png" />
+      </uap:VisualElements>
+      <Extensions>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer
+              Executable="BtBattery.Extension.exe"
+              Arguments="-RegisterProcessAsComServer"
+              DisplayName="Bluetooth Battery">
+              <com:Class Id="ae2698e1-5166-4448-9582-bdfdf457d95f" DisplayName="Bluetooth Battery" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+        <uap3:Extension Category="windows.appExtension">
+          <uap3:AppExtension
+            Name="com.microsoft.commandpalette"
+            Id="BtBattery"
+            PublicFolder="Public"
+            DisplayName="Bluetooth Battery"
+            Description="Monitor Bluetooth device battery levels">
+            <uap3:Properties>
+              <CmdPalProvider>
+                <Activation>
+                  <CreateInstance ClassId="ae2698e1-5166-4448-9582-bdfdf457d95f" />
+                </Activation>
+                <SupportedInterfaces>
+                  <Commands/>
+                </SupportedInterfaces>
+              </CmdPalProvider>
+            </uap3:Properties>
+          </uap3:AppExtension>
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <DeviceCapability Name="bluetooth" />
+  </Capabilities>
+
+</Package>

@@ -27,6 +27,9 @@ artifacts/
 **/[Pp]ackages/*
 !**/[Pp]ackages/build/
 
+# CsWinRT generated projections (regenerated on every build)
+**/Generated Files/
+
 # MSIX / AppX packaging (BtBattery.Extension)
 AppPackages/
 BundleArtifacts/
