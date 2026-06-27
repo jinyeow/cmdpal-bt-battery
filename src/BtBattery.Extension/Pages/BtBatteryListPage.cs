@@ -1,4 +1,4 @@
-using BtBattery.Abstractions;
+﻿using BtBattery.Abstractions;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using System.Collections.Generic;
@@ -20,7 +20,7 @@ public sealed partial class BtBatteryListPage : ListPage
         _getCurrent = getCurrent;
         _requestRefresh = requestRefresh;
         Name = "Bluetooth Battery";
-        Icon = new IconInfo(""); // Bluetooth glyph
+        Icon = new IconInfo(""); // Bluetooth glyph (Segoe MDL2 U+E702)
     }
 
     public override IListItem[] GetItems()

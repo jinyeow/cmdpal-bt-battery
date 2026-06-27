@@ -1,4 +1,4 @@
-using BtBattery.Abstractions;
+﻿using BtBattery.Abstractions;
 using BtBattery.Extension.Pages;
 using BtBattery.Windows;
 using Microsoft.CommandPalette.Extensions;
@@ -22,7 +22,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     {
         Id = "BtBattery";
         DisplayName = "Bluetooth Battery";
-        Icon = new IconInfo("");
+        Icon = new IconInfo("");
 
         _coordinator = new RefreshCoordinator(
             _btProvider,
@@ -39,7 +39,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
         _dockItem = new ListItem(_listPage)
         {
             Title = "Bluetooth Battery",
-            Icon = new IconInfo(""),
+            Icon = new IconInfo(""),
             Subtitle = "—",
         };
     }
@@ -47,13 +47,13 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     public override ICommandItem[] TopLevelCommands()
     {
         EnsureStarted();
-        return [new ListItem(_listPage) { Title = "Bluetooth Battery" }];
+        return [new ListItem(_listPage) { Title = "Bluetooth Battery", Icon = new IconInfo("") }];
     }
 
     public override ICommandItem[] GetDockBands()
     {
         EnsureStarted();
-        return [new WrappedDockItem([_dockItem], "BtBattery.dock", "Bluetooth Battery")];
+        return [new WrappedDockItem([_dockItem], "BtBattery.dock", "Bluetooth Battery") { Icon = new IconInfo("") }];
     }
 
     private void EnsureStarted()
