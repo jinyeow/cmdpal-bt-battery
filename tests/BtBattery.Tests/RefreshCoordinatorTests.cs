@@ -15,7 +15,6 @@ public sealed class RefreshCoordinatorTests
             ContainerId: name,
             DisplayName: name,
             Category: DeviceCategory.Other,
-            IsConnected: true,
             Battery: battery,
             HasMultipleBatteryValues: false);
 
@@ -242,6 +241,71 @@ public sealed class RefreshCoordinatorTests
         Assert.Empty(published);
     }
 
+    [Fact]
+    public async Task BackgroundRefresh_ProviderFault_CoordinatorStillFunctional()
+    {
+        var provider = new FakeProvider { Devices = [Device("Mouse", BatteryLevel.Known(50))] };
+        var published = new List<BatterySummary>();
+        var time = new FakeTimeProvider();
+        using var coordinator = new RefreshCoordinator(
+            provider, LowThreshold, time, published.Add, Debounce, Fallback);
+        coordinator.Start();
+
+        provider.FaultNext(); // first query will throw InvalidOperationException
+
+        provider.RaiseInvalidated();
+        time.Advance(Debounce);
+        await WaitForAsync(() => provider.QueryCount >= 1, "faulting refresh to run");
+
+        // _backgroundRunning must be false after the fault; the next trigger should start a new refresh
+        provider.RaiseInvalidated();
+        time.Advance(Debounce);
+        await WaitForAsync(() => published.Count == 1, "second refresh to publish");
+
+        Assert.Single(published);
+        Assert.Equal(2, provider.QueryCount);
+    }
+
+    [Fact]
+    public async Task Start_IsIdempotent()
+    {
+        var provider = new FakeProvider { Devices = [Device("Mouse", BatteryLevel.Known(50))] };
+        var published = new List<BatterySummary>();
+        var time = new FakeTimeProvider();
+        using var coordinator = new RefreshCoordinator(
+            provider, LowThreshold, time, published.Add, Debounce, Fallback);
+
+        coordinator.Start();
+        coordinator.Start(); // second call must not re-subscribe or re-start the watcher
+
+        provider.RaiseInvalidated();
+        time.Advance(Debounce);
+        await Task.Yield();
+
+        Assert.Equal(1, provider.WatchCount); // StartWatching called exactly once
+        Assert.Equal(1, provider.QueryCount);
+        Assert.Single(published);
+    }
+
+    [Fact]
+    public async Task RefreshNow_CancelledBeforeStart_ThrowsAndGateReleased()
+    {
+        var provider = new FakeProvider { Devices = [Device("Mouse", BatteryLevel.Known(50))] };
+        var published = new List<BatterySummary>();
+        var time = new FakeTimeProvider();
+        using var coordinator = new RefreshCoordinator(
+            provider, LowThreshold, time, published.Add, Debounce, Fallback);
+
+        // A pre-cancelled token causes WaitAsync to throw TaskCanceledException (: OperationCanceledException)
+        // without ever acquiring the semaphore, so the gate remains available.
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => coordinator.RefreshNowAsync(new CancellationToken(canceled: true)));
+
+        await coordinator.RefreshNowAsync(CancellationToken.None);
+
+        Assert.Single(published);
+    }
+
     private static async Task WaitForAsync(Func<bool> condition, string because)
     {
         for (int i = 0; i < 200; i++)
@@ -261,13 +325,21 @@ public sealed class RefreshCoordinatorTests
     private sealed class FakeProvider : IBatteryProvider
     {
         private TaskCompletionSource? _gate;
+        private bool _faultNext;
 
         public IReadOnlyList<MonitoredDevice> Devices { get; set; } = [];
         public int QueryCount { get; private set; }
+        public int WatchCount { get; private set; }
 
         public async Task<IReadOnlyList<MonitoredDevice>> GetConnectedDevicesAsync(CancellationToken ct = default)
         {
             QueryCount++;
+            if (_faultNext)
+            {
+                _faultNext = false;
+                throw new InvalidOperationException("Simulated provider fault.");
+            }
+
             IReadOnlyList<MonitoredDevice> snapshot = Devices; // capture at enumeration start, like a real provider
             TaskCompletionSource? gate = _gate;
             if (gate is not null)
@@ -287,11 +359,14 @@ public sealed class RefreshCoordinatorTests
             _gate = null;
         }
 
+        /// <summary>Makes the next <see cref="GetConnectedDevicesAsync"/> call throw <see cref="InvalidOperationException"/>.</summary>
+        public void FaultNext() => _faultNext = true;
+
         public event EventHandler? DevicesInvalidated;
 
         public void RaiseInvalidated() => DevicesInvalidated?.Invoke(this, EventArgs.Empty);
 
-        public void StartWatching() { }
+        public void StartWatching() => WatchCount++;
 
         public void StopWatching() { }
 
