@@ -5,6 +5,7 @@ using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using System;
 using System.Diagnostics;
+using System.Linq;
 
 namespace BtBattery.Extension;
 
@@ -15,6 +16,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     private readonly DeviceInformationBatteryProvider _btProvider = new();
     private readonly RefreshCoordinator _coordinator;
     private bool _started;
+    private BatterySummary _lastPublished = BatterySummary.Empty;
 
     public BtBatteryCommandsProvider()
     {
@@ -78,9 +80,22 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
         try { _dockItem.Subtitle = summary.DockTitle; }
         catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
 
+        // Guard: only re-render the list if content actually changed.
+        // Without this, GetItems() → _requestRefresh() → OnSummaryPublished (unchanged) →
+        // NotifySummaryChanged() → GetItems() creates an infinite BT enumeration loop.
+        bool changed = !SummaryContentEquals(summary, _lastPublished);
+        _lastPublished = summary;
+        if (!changed) return;
+
         try { _listPage.NotifySummaryChanged(); }
         catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
     }
+
+    private static bool SummaryContentEquals(BatterySummary a, BatterySummary b) =>
+        a.DockTitle == b.DockTitle &&
+        a.LowCount == b.LowCount &&
+        a.Rows.Count == b.Rows.Count &&
+        a.Rows.SequenceEqual(b.Rows);
 
     public override void Dispose()
     {
