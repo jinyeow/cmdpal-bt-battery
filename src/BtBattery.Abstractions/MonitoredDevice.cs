@@ -17,6 +17,5 @@ public sealed record MonitoredDevice(
     string ContainerId,
     string DisplayName,
     DeviceCategory Category,
-    bool IsConnected,
     BatteryLevel Battery,
     bool HasMultipleBatteryValues);

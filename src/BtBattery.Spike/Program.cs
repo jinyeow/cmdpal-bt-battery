@@ -119,7 +119,7 @@ using (IBatteryProvider provider = new DeviceInformationBatteryProvider())
         string battery = m.Battery.State == BatteryState.Known ? $"{m.Battery.Percent}%" : "Unknown";
         string multi = m.HasMultipleBatteryValues ? " (multiple battery values collapsed)" : string.Empty;
         Console.WriteLine($"  • {m.DisplayName} [{m.Category}] — {battery}{multi}");
-        Console.WriteLine($"      containerId={m.ContainerId} connected={m.IsConnected}");
+        Console.WriteLine($"      containerId={m.ContainerId}");
     }
 
     // ---- Section E: watcher smoke test ----------------------------------------------------------

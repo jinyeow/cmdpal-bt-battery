@@ -35,9 +35,23 @@ public sealed class DeviceInformationBatteryProvider : IBatteryProvider
             null,
             DeviceInformationKind.DeviceContainer).AsTask(ct);
 
-        await Task.WhenAll(deviceNodesTask, connectedContainersTask).ConfigureAwait(false);
+        DeviceInformationCollection? deviceNodes = null;
+        DeviceInformationCollection? connectedContainers = null;
 
-        return Aggregate(deviceNodesTask.Result, connectedContainersTask.Result);
+        try { deviceNodes = await deviceNodesTask.ConfigureAwait(false); }
+        catch (Exception ex) { System.Diagnostics.Trace.TraceError($"DeviceNodes enum failed: {ex}"); }
+
+        try { connectedContainers = await connectedContainersTask.ConfigureAwait(false); }
+        catch (Exception ex) { System.Diagnostics.Trace.TraceError($"ConnectedContainers enum failed: {ex}"); }
+
+        if (deviceNodes is null && connectedContainers is null)
+        {
+            return Array.Empty<MonitoredDevice>();
+        }
+
+        return Aggregate(
+            (IEnumerable<DeviceInformation>?)deviceNodes ?? [],
+            (IEnumerable<DeviceInformation>?)connectedContainers ?? []);
     }
 
     /// <inheritdoc />
@@ -217,7 +231,6 @@ public sealed class DeviceInformationBatteryProvider : IBatteryProvider
                 ContainerId: containerId,
                 DisplayName: name,
                 Category: ResolveCategory(children, name),
-                IsConnected: true,
                 Battery: battery,
                 HasMultipleBatteryValues: knownPercents.Distinct().Count() > 1));
         }
@@ -240,29 +253,23 @@ public sealed class DeviceInformationBatteryProvider : IBatteryProvider
 
         if (classes.Contains(BluetoothDeviceProperties.HidClass))
         {
-            return name.Contains("keyboard", StringComparison.OrdinalIgnoreCase)
-                ? DeviceCategory.Keyboard
-                : DeviceCategory.Mouse;
+            DeviceCategory cat = CategoryFromName(name);
+            // HID devices default to Mouse for unknowns (preserves existing behavior for controllers, trackpads).
+            return cat == DeviceCategory.Other ? DeviceCategory.Mouse : cat;
         }
 
-        if (name.Contains("keyboard", StringComparison.OrdinalIgnoreCase))
-        {
-            return DeviceCategory.Keyboard;
-        }
+        // Non-HID: pure name match.
+        return CategoryFromName(name);
+    }
 
-        if (name.Contains("mouse", StringComparison.OrdinalIgnoreCase))
-        {
-            return DeviceCategory.Mouse;
-        }
-
+    private static DeviceCategory CategoryFromName(string name)
+    {
+        if (name.Contains("keyboard", StringComparison.OrdinalIgnoreCase)) return DeviceCategory.Keyboard;
         if (name.Contains("earbud", StringComparison.OrdinalIgnoreCase)
             || name.Contains("earphone", StringComparison.OrdinalIgnoreCase)
             || name.Contains("headset", StringComparison.OrdinalIgnoreCase)
-            || name.Contains("headphone", StringComparison.OrdinalIgnoreCase))
-        {
-            return DeviceCategory.Headset;
-        }
-
+            || name.Contains("headphone", StringComparison.OrdinalIgnoreCase)) return DeviceCategory.Headset;
+        if (name.Contains("mouse", StringComparison.OrdinalIgnoreCase)) return DeviceCategory.Mouse;
         return DeviceCategory.Other;
     }
 
