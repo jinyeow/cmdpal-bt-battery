@@ -7,21 +7,25 @@ namespace BtBattery.Extension.Pages;
 
 /// <summary>
 /// Top-level list page: searchable full device detail view.
-/// Items are populated from the coordinator's current <see cref="BatterySummary"/> on each open.
+/// Opens with the cached summary (fast first paint) and kicks off a background refresh;
+/// when the refresh completes, <see cref="NotifySummaryChanged"/> triggers a re-render.
 /// </summary>
 public sealed partial class BtBatteryListPage : ListPage
 {
     private readonly Func<BatterySummary> _getCurrent;
+    private readonly Action _requestRefresh;
 
-    public BtBatteryListPage(Func<BatterySummary> getCurrent)
+    public BtBatteryListPage(Func<BatterySummary> getCurrent, Action requestRefresh)
     {
         _getCurrent = getCurrent;
+        _requestRefresh = requestRefresh;
         Name = "Bluetooth Battery";
         Icon = new IconInfo(""); // Bluetooth glyph
     }
 
     public override IListItem[] GetItems()
     {
+        _requestRefresh(); // kick off a fresh snapshot; NotifySummaryChanged() will re-render
         BatterySummary summary = _getCurrent();
         return BuildItems(summary);
     }

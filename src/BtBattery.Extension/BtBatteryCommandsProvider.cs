@@ -30,7 +30,9 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
             debounceWindow: TimeSpan.FromMilliseconds(250),
             fallbackInterval: TimeSpan.FromMinutes(5));
 
-        _listPage = new BtBatteryListPage(() => _coordinator.Current);
+        _listPage = new BtBatteryListPage(
+            getCurrent: () => _coordinator.Current,
+            requestRefresh: () => _ = _coordinator.RefreshNowAsync());
 
         _dockItem = new ListItem(_listPage)
         {
