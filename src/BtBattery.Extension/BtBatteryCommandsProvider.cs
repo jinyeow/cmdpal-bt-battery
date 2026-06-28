@@ -41,6 +41,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
         _listItem = new ListItem(_listPage)
         {
             Title = "Bluetooth Battery",
+            Subtitle = "Bluetooth battery levels",
             Icon = new IconInfo(""),
         };
 
@@ -93,7 +94,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
         _lastPublished = summary;
         if (!changed) return;
 
-        try { _listItem.Subtitle = summary.StatusLine; }
+        try { if (!string.IsNullOrEmpty(summary.StatusLine)) _listItem.Subtitle = summary.StatusLine; }
         catch (Exception ex) { Trace.TraceWarning($"BtBattery: failed to update entry subtitle: {ex}"); }
 
         try { _dockBand.Items = BuildDockItems(summary.Rows); }
@@ -107,12 +108,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     {
         if (rows.Count == 0)
         {
-            return [new ListItem(_listPage)
-            {
-                Title = "Bluetooth Battery",
-                Subtitle = "—",
-                Icon = new IconInfo(""),
-            }];
+            return [];
         }
 
         return [..rows.Select(d => (IListItem)new ListItem(_listPage)
