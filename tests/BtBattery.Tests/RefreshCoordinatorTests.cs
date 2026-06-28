@@ -31,7 +31,7 @@ public sealed class RefreshCoordinatorTests
         await coordinator.RefreshNowAsync();
 
         BatterySummary summary = Assert.Single(published);
-        Assert.Equal("15% Earbuds", summary.DockTitle);
+        Assert.Equal("15% Earbuds", summary.StatusLine);
         Assert.Equal(summary, coordinator.Current);
         Assert.Equal(1, provider.QueryCount);
     }
@@ -160,8 +160,8 @@ public sealed class RefreshCoordinatorTests
         provider.Release();
         await WaitForAsync(() => published.Count == 2, "both refreshes published");
 
-        Assert.Equal("90% Mouse", published[0].DockTitle);  // in-order, serialized
-        Assert.Equal("10% Mouse", published[^1].DockTitle);  // latest snapshot wins
+        Assert.Equal("90% Mouse", published[0].StatusLine);  // in-order, serialized
+        Assert.Equal("10% Mouse", published[^1].StatusLine);  // latest snapshot wins
         Assert.Equal(published[^1], coordinator.Current);
     }
 

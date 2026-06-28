@@ -8,7 +8,7 @@ public sealed record BatterySummary(
     MonitoredDevice? Headline,
     int LowCount,
     IReadOnlyList<MonitoredDevice> Rows,
-    string DockTitle)
+    string StatusLine)
 {
     /// <summary>True when at least one device reports a Known battery at/below the low threshold.</summary>
     public bool HasLowDevice => LowCount > 0;
@@ -17,7 +17,7 @@ public sealed record BatterySummary(
     public static readonly BatterySummary Empty =
         new(null, 0, [], string.Empty);
 
-    /// <summary>Dock title shown when devices are connected but none report a Known battery.</summary>
+    /// <summary>Status line shown when devices are connected but none report a Known battery.</summary>
     private const string NeutralTitle = "—";
 
     /// <summary>
@@ -45,20 +45,20 @@ public sealed record BatterySummary(
 
         int lowCount = rows.Count(d => d.Battery.State == BatteryState.Known && d.Battery.Percent <= lowThreshold);
 
-        string dockTitle;
+        string statusLine;
         if (headline is null)
         {
-            dockTitle = NeutralTitle;
+            statusLine = NeutralTitle;
         }
         else
         {
-            dockTitle = $"{headline.Battery.Percent}% {headline.DisplayName}";
+            statusLine = $"{headline.Battery.Percent}% {headline.DisplayName}";
             if (lowCount >= 2)
             {
-                dockTitle += $" +{lowCount - 1}";
+                statusLine += $" +{lowCount - 1}";
             }
         }
 
-        return new BatterySummary(headline, lowCount, rows, dockTitle);
+        return new BatterySummary(headline, lowCount, rows, statusLine);
     }
 }

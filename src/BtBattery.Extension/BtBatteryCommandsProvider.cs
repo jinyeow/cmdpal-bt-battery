@@ -114,7 +114,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     }
 
     private static bool SummaryContentEquals(BatterySummary a, BatterySummary b) =>
-        a.DockTitle == b.DockTitle &&
+        a.StatusLine == b.StatusLine &&
         a.LowCount == b.LowCount &&
         a.Rows.Count == b.Rows.Count &&
         a.Rows.SequenceEqual(b.Rows);

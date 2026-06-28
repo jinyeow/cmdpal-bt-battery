@@ -28,7 +28,7 @@ public sealed class BatterySummaryComputeTests
         Assert.Empty(summary.Rows);
         Assert.False(summary.HasLowDevice);
         Assert.Equal(0, summary.LowCount);
-        Assert.Equal(string.Empty, summary.DockTitle);
+        Assert.Equal(string.Empty, summary.StatusLine);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public sealed class BatterySummaryComputeTests
         BatterySummary summary = BatterySummary.Compute([high, low], LowThreshold);
 
         Assert.Equal(low, summary.Headline);
-        Assert.Equal("35% Earbuds", summary.DockTitle);
+        Assert.Equal("35% Earbuds", summary.StatusLine);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class BatterySummaryComputeTests
         Assert.Null(summary.Headline);
         Assert.Equal(2, summary.Rows.Count);
         Assert.False(summary.HasLowDevice);
-        Assert.Equal("—", summary.DockTitle);
+        Assert.Equal("—", summary.StatusLine);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public sealed class BatterySummaryComputeTests
         BatterySummary summary = BatterySummary.Compute([low2, lowest, low3], LowThreshold);
 
         Assert.Equal(3, summary.LowCount);
-        Assert.Equal("5% Earbuds +2", summary.DockTitle);
+        Assert.Equal("5% Earbuds +2", summary.StatusLine);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public sealed class BatterySummaryComputeTests
         BatterySummary summary = BatterySummary.Compute([normal, flat], LowThreshold);
 
         Assert.Equal(flat, summary.Headline);
-        Assert.Equal("0% Earbuds", summary.DockTitle);
+        Assert.Equal("0% Earbuds", summary.StatusLine);
         Assert.Equal(1, summary.LowCount);
         Assert.True(summary.HasLowDevice);
     }
@@ -150,7 +150,7 @@ public sealed class BatterySummaryComputeTests
 
         BatterySummary summary = BatterySummary.Compute([low, normal], LowThreshold);
 
-        Assert.Equal("10% Earbuds", summary.DockTitle);
+        Assert.Equal("10% Earbuds", summary.StatusLine);
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public sealed class BatterySummaryComputeTests
         BatterySummary summary = BatterySummary.Compute([alsoLow, lowest, normal], LowThreshold);
 
         Assert.Equal(2, summary.LowCount);
-        Assert.Equal("8% Earbuds +1", summary.DockTitle);
+        Assert.Equal("8% Earbuds +1", summary.StatusLine);
     }
 
     [Fact]
