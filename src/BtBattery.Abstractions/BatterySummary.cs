@@ -17,6 +17,16 @@ public sealed record BatterySummary(
     public static readonly BatterySummary Empty =
         new(null, 0, [], string.Empty);
 
+    /// <summary>
+    /// Structural equality that compares observable content, not reference identity.
+    /// Used by the publish guard to prevent infinite BT enumeration loops.
+    /// </summary>
+    public static bool ContentEquals(BatterySummary a, BatterySummary b) =>
+        a.StatusLine == b.StatusLine &&
+        a.LowCount == b.LowCount &&
+        a.Rows.Count == b.Rows.Count &&
+        a.Rows.SequenceEqual(b.Rows);
+
     /// <summary>Status line shown when devices are connected but none report a Known battery.</summary>
     private const string NeutralTitle = "—";
 
