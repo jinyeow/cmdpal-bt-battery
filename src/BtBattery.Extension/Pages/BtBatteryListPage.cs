@@ -1,4 +1,4 @@
-﻿using BtBattery.Abstractions;
+using BtBattery.Abstractions;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 using System.Collections.Generic;
