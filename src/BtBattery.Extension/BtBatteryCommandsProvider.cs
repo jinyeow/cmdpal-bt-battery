@@ -49,7 +49,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     public override ICommandItem[] TopLevelCommands()
     {
         EnsureStarted();
-        return [new ListItem(_listPage) { Title = "Bluetooth Battery", Icon = new IconInfo("") }];
+        return [new ListItem(_listPage) { Title = "Bluetooth Battery", Subtitle = "Device battery levels", Icon = new IconInfo("") }];
     }
 
     public override ICommandItem[] GetDockBands()
