@@ -40,4 +40,7 @@ public readonly record struct BatteryLevel
 
         return new BatteryLevel(BatteryState.Known, percent);
     }
+
+    /// <summary>Returns <c>"{Percent}%"</c> for a Known reading, <c>"—"</c> for Unknown.</summary>
+    public string FormatTitle() => State == BatteryState.Known ? $"{Percent}%" : "—";
 }

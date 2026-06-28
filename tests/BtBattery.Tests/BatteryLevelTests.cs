@@ -47,4 +47,22 @@ public sealed class BatteryLevelTests
         Assert.Equal(BatteryState.Unknown, uninitialized.State);
         Assert.Equal(BatteryLevel.Unknown, uninitialized);
     }
+
+    [Fact]
+    public void FormatTitle_Known_ReturnsPercent()
+    {
+        Assert.Equal("85%", BatteryLevel.Known(85).FormatTitle());
+    }
+
+    [Fact]
+    public void FormatTitle_KnownZero_ReturnsZeroPercent()
+    {
+        Assert.Equal("0%", BatteryLevel.Known(0).FormatTitle());
+    }
+
+    [Fact]
+    public void FormatTitle_Unknown_ReturnsDash()
+    {
+        Assert.Equal("—", BatteryLevel.Unknown.FormatTitle());
+    }
 }
