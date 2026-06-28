@@ -19,7 +19,7 @@ public sealed partial class BtBatteryListPage : ListPage
     {
         _getCurrent = getCurrent;
         _requestRefresh = requestRefresh;
-        Id = "BtBattery.listPage";
+        Id = CommandIds.ListPage;
         Name = "Bluetooth Battery";
         Icon = new IconInfo(""); // Bluetooth glyph (Segoe MDL2 U+E702)
     }

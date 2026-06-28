@@ -13,6 +13,7 @@ namespace BtBattery.Extension;
 public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDisposable
 {
     private readonly BtBatteryListPage _listPage;
+    private readonly ListItem _listItem;
     private readonly WrappedDockItem _dockBand;
     private readonly DeviceInformationBatteryProvider _btProvider = new();
     private readonly RefreshCoordinator _coordinator;
@@ -37,9 +38,15 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
             getCurrent: () => _coordinator.Current,
             requestRefresh: () => _ = _coordinator.RefreshNowAsync());
 
+        _listItem = new ListItem(_listPage)
+        {
+            Title = "Bluetooth Battery",
+            Icon = new IconInfo(""),
+        };
+
         _dockBand = new WrappedDockItem(
             BuildDockItems(BatterySummary.Empty.Rows),
-            "BtBattery.listPage",
+            CommandIds.ListPage,
             "Bluetooth Battery")
         {
             Icon = new IconInfo(""),
@@ -49,7 +56,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     public override ICommandItem[] TopLevelCommands()
     {
         EnsureStarted();
-        return [new ListItem(_listPage) { Title = "Bluetooth Battery", Subtitle = "Device battery levels", Icon = new IconInfo("") }];
+        return [_listItem];
     }
 
     public override ICommandItem[] GetDockBands()
@@ -86,11 +93,14 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
         _lastPublished = summary;
         if (!changed) return;
 
+        try { _listItem.Subtitle = summary.StatusLine; }
+        catch (Exception ex) { Trace.TraceWarning($"BtBattery: failed to update entry subtitle: {ex}"); }
+
         try { _dockBand.Items = BuildDockItems(summary.Rows); }
-        catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
+        catch (Exception ex) { Trace.TraceWarning($"BtBattery: failed to update dock band items: {ex}"); }
 
         try { _listPage.NotifySummaryChanged(); }
-        catch (Exception ex) { Trace.TraceWarning(ex.ToString()); }
+        catch (Exception ex) { Trace.TraceWarning($"BtBattery: failed to notify list page: {ex}"); }
     }
 
     private IListItem[] BuildDockItems(IReadOnlyList<MonitoredDevice> rows)
