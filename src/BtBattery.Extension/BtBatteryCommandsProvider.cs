@@ -94,7 +94,7 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
         _lastPublished = summary;
         if (!changed) return;
 
-        try { if (!string.IsNullOrEmpty(summary.StatusLine)) _listItem.Subtitle = summary.StatusLine; }
+        try { _listItem.Subtitle = string.IsNullOrEmpty(summary.StatusLine) ? "Bluetooth battery levels" : summary.StatusLine; }
         catch (Exception ex) { Trace.TraceWarning($"BtBattery: failed to update entry subtitle: {ex}"); }
 
         try { _dockBand.Items = BuildDockItems(summary.Rows); }
@@ -113,17 +113,14 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
 
         return [..rows.Select(d => (IListItem)new ListItem(_listPage)
         {
-            Title = d.Battery.State == BatteryState.Known ? $"{d.Battery.Percent}%" : "—",
+            Title = d.Battery.FormatTitle(),
             Subtitle = d.DisplayName,
             Icon = new IconInfo(DeviceCategoryGlyph.For(d.Category)),
         })];
     }
 
     private static bool SummaryContentEquals(BatterySummary a, BatterySummary b) =>
-        a.StatusLine == b.StatusLine &&
-        a.LowCount == b.LowCount &&
-        a.Rows.Count == b.Rows.Count &&
-        a.Rows.SequenceEqual(b.Rows);
+        BatterySummary.ContentEquals(a, b);
 
     public override void Dispose()
     {
