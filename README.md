@@ -26,9 +26,26 @@ both Classic (BR/EDR) and LE devices.
 - [PowerToys](https://github.com/microsoft/PowerToys) with Command Palette enabled
 - .NET 9 SDK (pinned via `global.json`) to build
 
-## Install (development sideload)
+## Install
 
-There's no packaged release yet — build and sideload locally:
+### From a GitHub Release
+
+Grab the `.msix` for your architecture (x64 or ARM64) and its matching `.cer` from the
+[latest release](../../releases/latest). Each release is signed with a throwaway certificate
+that isn't shared across releases (see [ADR 005](docs/adr/005-release-signing.md)), so trust the
+`.cer` before every install/upgrade (substitute `x64`/`ARM64` for your arch):
+
+```powershell
+# One-time trust for this release (elevated PowerShell)
+Import-Certificate -FilePath .\BtBattery-<arch>.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+
+# Install
+Add-AppxPackage -Path .\BtBattery_<version>_<arch>.msix
+```
+
+### Development sideload
+
+Build and sideload locally instead:
 
 ```powershell
 # Build

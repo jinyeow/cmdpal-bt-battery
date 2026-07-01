@@ -1,0 +1,151 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Run tests
+        run: dotnet test tests/BtBattery.Tests/ -p:Platform=x64
+
+  package:
+    needs: test
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [x64, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Derive package version from tag
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -notmatch '^v(\d+\.\d+\.\d+)$') {
+            Write-Error "Tag '$tag' does not match expected pattern vX.Y.Z"
+            exit 1
+          }
+          "PACKAGE_VERSION=$($Matches[1]).0" >> $env:GITHUB_ENV
+
+      - name: Set manifest version
+        shell: pwsh
+        run: |
+          $manifestPath = "src/BtBattery.Extension/Package.appxmanifest"
+          [xml]$manifest = Get-Content $manifestPath
+          $manifest.Package.Identity.Version = $env:PACKAGE_VERSION
+          $manifest.Save($manifestPath)
+
+      # No persistent signing identity is kept across releases (see docs/adr/005-release-signing.md).
+      # A throwaway self-signed cert is generated per build, used only to produce an installable
+      # MSIX, then discarded. Its public .cer ships alongside the .msix so users can trust this
+      # specific release.
+      - name: Generate ephemeral signing certificate
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate `
+            -Type Custom `
+            -Subject "CN=BtBattery" `
+            -KeyUsage DigitalSignature `
+            -FriendlyName "BtBattery release signing (ephemeral)" `
+            -CertStoreLocation "Cert:\CurrentUser\My" `
+            -KeyAlgorithm RSA `
+            -KeyLength 2048 `
+            -KeyExportPolicy Exportable `
+            -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
+            -KeySpec Signature `
+            -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}Subject Type:End Entity") `
+            -NotAfter (Get-Date).AddYears(3)
+
+          $pfxPath = Join-Path $env:RUNNER_TEMP "BtBattery.pfx"
+          $cerPath = Join-Path $env:RUNNER_TEMP "BtBattery-${{ matrix.platform }}.cer"
+
+          # dotnet build cannot import a password-protected pfx (dotnet/msbuild#9830) - export
+          # with no password. The pfx never leaves this ephemeral runner.
+          Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password (New-Object System.Security.SecureString) | Out-Null
+          Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
+          Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $cert.Thumbprint } | Remove-Item -Force
+
+          "PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
+          "CER_PATH=$cerPath" >> $env:GITHUB_ENV
+
+      - name: Build and sign package (${{ matrix.platform }})
+        run: >
+          dotnet build src/BtBattery.Extension/BtBattery.Extension.csproj
+          -c Release
+          -p:Platform=${{ matrix.platform }}
+          -p:GenerateAppxPackageOnBuild=true
+          -p:AppxBundle=Never
+          -p:UapAppxPackageBuildMode=SideloadOnly
+          -p:AppxPackageDir="${{ runner.temp }}\Packages\"
+          -p:PackageCertificateKeyFile="${{ env.PFX_PATH }}"
+
+      - name: Stage release assets
+        shell: pwsh
+        run: |
+          $stageDir = Join-Path $env:RUNNER_TEMP "release-assets"
+          New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
+
+          $msix = Get-ChildItem "${{ runner.temp }}\Packages" -Recurse -Filter "*.msix" | Select-Object -First 1
+          Copy-Item $msix.FullName (Join-Path $stageDir "BtBattery_$($env:PACKAGE_VERSION)_${{ matrix.platform }}.msix")
+          Copy-Item $env:CER_PATH (Join-Path $stageDir "BtBattery-${{ matrix.platform }}.cer")
+
+          "ASSETS_DIR=$stageDir" >> $env:GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ matrix.platform }}
+          path: ${{ env.ASSETS_DIR }}
+
+  release:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-assets-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Generate checksums
+        working-directory: release-assets
+        run: sha256sum * > SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            Each release is signed with a throwaway self-signed certificate (not shared across
+            releases - see [ADR 005](docs/adr/005-release-signing.md)), so this one-time trust
+            step is required for **this version**:
+
+            1. Download the `.msix` for your architecture (x64 or ARM64) and the matching `.cer`.
+            2. Trust the certificate (elevated PowerShell, substitute `x64`/`ARM64` for your arch):
+               ```powershell
+               Import-Certificate -FilePath .\BtBattery-<arch>.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+               ```
+            3. Install the package:
+               ```powershell
+               Add-AppxPackage -Path .\BtBattery_<version>_<arch>.msix
+               ```
+            4. Open Command Palette and search "Bluetooth Battery".
+
+            Verify downloads against `SHA256SUMS.txt` if you like.
