@@ -1,5 +1,7 @@
 # Bluetooth Battery — PowerToys Command Palette extension
 
+[![CI](https://github.com/jinyeow/cmdpal-bt-battery/actions/workflows/ci.yml/badge.svg)](https://github.com/jinyeow/cmdpal-bt-battery/actions/workflows/ci.yml)
+
 A [PowerToys Command Palette](https://learn.microsoft.com/en-us/windows/powertoys/command-palette/overview)
 extension that shows the battery levels of your connected Bluetooth devices (earbuds, mouse,
 keyboard) right where you already work: the palette itself, and a persistent Dock band.
@@ -7,6 +9,18 @@ keyboard) right where you already work: the palette itself, and a persistent Doc
 It reads the same cached battery property Windows Settings → Bluetooth & devices shows, so the
 number never disagrees with the system, needs no active GATT session or pairing dance, and covers
 both Classic (BR/EDR) and LE devices.
+
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Install](#install)
+  - [From a GitHub Release](#from-a-github-release)
+  - [Development sideload](#development-sideload)
+- [Development](#development)
+- [Project layout](#project-layout)
+- [Status](#status)
+- [License](#license)
 
 ## Features
 
