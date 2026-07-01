@@ -24,6 +24,8 @@ jobs:
 
   test:
     runs-on: windows-latest
+    permissions:
+      checks: write
     steps:
       - uses: actions/checkout@v7
 
@@ -32,4 +34,12 @@ jobs:
           global-json-file: global.json
 
       - name: Run tests
-        run: dotnet test tests/BtBattery.Tests/ -p:Platform=x64
+        run: dotnet test tests/BtBattery.Tests/ -p:Platform=x64 --logger trx --results-directory TestResults
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v3
+        if: success() || failure()
+        with:
+          name: xUnit Tests
+          path: TestResults/*.trx
+          reporter: dotnet-trx
