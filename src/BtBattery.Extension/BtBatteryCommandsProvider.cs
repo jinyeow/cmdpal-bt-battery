@@ -108,7 +108,13 @@ public sealed partial class BtBatteryCommandsProvider : CommandProvider, IDispos
     {
         if (rows.Count == 0)
         {
-            return [];
+            // A pinned band with no items renders as nothing, so show a neutral
+            // Bluetooth glyph that still opens the list page. With no Title set,
+            // the toolkit falls back to the list page's Name as the label.
+            return [new ListItem(_listPage)
+            {
+                Icon = new IconInfo(""),
+            }];
         }
 
         return [..rows.Select(d => (IListItem)new ListItem(_listPage)
